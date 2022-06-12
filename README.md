@@ -1,6 +1,6 @@
 # Fastify-SQLITE-Auth
 
-This ia s simple Fastify API with token-based authentication (expires in 1 day)
+This is simple Fastify API with token-based authentication (expires in 1 day)
 
 ## Usage (Development)
 
