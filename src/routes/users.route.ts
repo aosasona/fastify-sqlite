@@ -5,7 +5,12 @@ const fastify = Fastify();
 import { RegRoute } from "types/user.types";
 
 // Import handlers
-import { viewUsers, createUser } from "../handlers/users.handler";
+import {
+  viewUsers,
+  createUser,
+  loginUser,
+  verifyUser,
+} from "../handlers/users.handler";
 
 export default async function (fastify: any, options: any, done: any) {
   /**
@@ -19,6 +24,18 @@ export default async function (fastify: any, options: any, done: any) {
    * @access - Public
    */
   fastify.post("/users/create", createUser);
+
+  /**
+   * @description - Login a user
+   * @access - Public
+   */
+  fastify.post("/users/login", loginUser);
+
+  /**
+   * @description - Verify a user
+   * @access - Public
+   */
+  fastify.get("/user", verifyUser);
 
   done();
 }

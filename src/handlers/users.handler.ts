@@ -1,5 +1,11 @@
+import Fastify from "fastify";
+const fastify = Fastify();
 import { database } from "../config/database";
-import { UserInterface } from "types/user.types";
+import {
+  SingleUserInterface,
+  TokenInterface,
+  UserInterface,
+} from "types/user.types";
 import validator from "validator";
 import bcrypt from "bcryptjs";
 import { Database, Statement } from "sqlite3";
@@ -20,6 +26,7 @@ interface User {
 // Promisify database methods
 const query: any = promisify(database.all).bind(database);
 const run: any = promisify(database.run).bind(database);
+const get: any = promisify(database.get).bind(database);
 
 /**
  * @description - View all users
@@ -123,5 +130,111 @@ const createUser = async (request: any, reply: any) => {
 /**
  * @description - Login a user
  */
+const loginUser = async (request: any, reply: any) => {
+  try {
+    const {
+      body: { identifier, password },
+    }: Body = request;
 
-export { viewUsers, createUser };
+    // Check if all fields are filled
+    if (!(identifier && password)) {
+      return reply.code(400).send({
+        message: "Please fill in all fields",
+      });
+    }
+
+    // Cast data
+    const Identifier: string = identifier?.toLowerCase();
+
+    // Check if user exists
+    const checkSql =
+      "SELECT email, password FROM users WHERE username = ? OR email = ? LIMIT 1";
+    const user: SingleUserInterface | undefined | any = await get(checkSql, [
+      Identifier,
+      Identifier,
+    ]);
+
+    // If user does not exist
+    if (!user || !Boolean(user)) {
+      return reply.code(404).send({
+        message: "User does not exist",
+      });
+    }
+
+    // Compare password with password hash
+    const comparePassword: boolean = await bcrypt.compare(
+      password,
+      user?.password
+    );
+
+    // If password is incorrect
+    if (!comparePassword) {
+      return reply.code(400).send({
+        message: "Password is incorrect!",
+      });
+    }
+
+    // Create JWT token
+    const token: string = await reply.jwtSign(
+      {
+        email: user?.email,
+        role: ["user"],
+      },
+      { expiresIn: "1d" }
+    );
+
+    // Send response message
+    return reply.send({
+      message: "Welcome back chief!",
+      token: token,
+    });
+  } catch (error: any) {
+    return reply.code(500).send({
+      message: error?.message || "Something went wrong",
+    });
+  }
+};
+
+/**
+ * @description - Login a user
+ */
+const verifyUser = async (request: any, reply: any) => {
+  try {
+    const { authorization } = request.headers;
+
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+      return reply.code(401).send({
+        message: "Please provide a valid token!",
+      });
+    }
+
+    // Verify token
+    const verified: TokenInterface = await request.jwtVerify();
+
+    const { email } = verified;
+
+    // Get the user's name
+    const sql: string = "SELECT username, email FROM users WHERE email = ?";
+
+    const user: UserInterface | undefined | any = await get(sql, [email]);
+
+    // If user does not exist
+    if (!user || !Boolean(user)) {
+      return reply.code(404).send({
+        message: "User does not exist",
+      });
+    }
+
+    // Send response message
+    return reply.send({
+      message: "Yup, you are logged in!",
+      user,
+    });
+  } catch (error: any) {
+    return reply.code(500).send({
+      message: error?.message || "Something went wrong",
+    });
+  }
+};
+
+export { viewUsers, createUser, loginUser, verifyUser };

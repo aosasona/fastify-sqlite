@@ -1,18 +1,6 @@
 import Fastify from "fastify";
-const fastify = Fastify({
-  logger: {
-    transport:
-      process.env.NODE_ENV !== "production"
-        ? {
-            target: "pino-pretty",
-            options: {
-              translateTime: "HH:MM:ss Z",
-              ignore: "hostname",
-            },
-          }
-        : undefined,
-  },
-});
+const options = require("./config/fastify");
+const fastify = Fastify(options);
 
 // Load environment variables from .env file
 import dotenv from "dotenv";
